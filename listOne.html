@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Employee | Bharath Employee Payroll Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">💼 Bharath Employee Payroll Management System</div>
+    <nav><a href="index.html">Home</a><a href="list.html">All Employees</a><a class="active" href="listOne.html">Search</a><a href="insert.html">Add Employee</a><a href="update.html">Update</a><a href="delete.html">Delete</a><a href="salary.html">Salary</a><a href="payroll.html">Payroll</a><a href="reports.html">Reports</a></nav>
+  </header>
+  <main class="page">
+    <div class="page-heading"><span class="eyebrow">QUICK LOOKUP</span><h1>Search for an employee</h1><p>Enter an employee ID to view their details.</p></div>
+    <section class="panel form-panel">
+      <form id="searchForm"><label>Employee ID<input id="employee_id" type="number" min="1" placeholder="Enter employee ID" required></label>
+      <button class="btn primary" type="submit">Search employee</button></form>
+      <p id="message" class="message"></p>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Joined</th></tr></thead><tbody id="rows"><tr><td colspan="7">Search for an employee to see their details.</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <footer>Bharath Employee Payroll Management System · Employee Payroll Management System</footer>
+<script>
+document.getElementById("searchForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const id = document.getElementById("employee_id").value, rows = document.getElementById("rows"), msg = document.getElementById("message");
+  try {
+    const r = await fetch("/employees/" + encodeURIComponent(id));
+    if (!r.ok) throw new Error(r.status === 404 ? "Employee not found." : "Request failed: " + r.status);
+    const data = await r.json(), item = Array.isArray(data) ? data[0] : data;
+    if (!item) throw new Error("Employee not found.");
+    rows.innerHTML = ""; const tr = document.createElement("tr");
+    ["employee_id", "name", "email", "phone", "department", "designation", "join_date"].forEach(k => {
+      const td = document.createElement("td"); td.textContent = item[k] ?? "—"; tr.appendChild(td);
+    });
+    rows.appendChild(tr);
+    msg.textContent = "Employee found."; msg.className = "message success";
+  } catch (err) {
+    rows.innerHTML = '<tr><td colspan="7">No employee details to display.</td></tr>';
+    msg.textContent = err.message + " If the API is unavailable, check your backend."; msg.className = "message error";
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Update Employee | Bharath Employee Payroll Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">💼 Bharath Employee Payroll Management System</div>
+    <nav><a href="index.html">Home</a><a href="list.html">All Employees</a><a href="listOne.html">Search</a><a href="insert.html">Add Employee</a><a class="active" href="update.html">Update</a><a href="delete.html">Delete</a><a href="salary.html">Salary</a><a href="payroll.html">Payroll</a><a href="reports.html">Reports</a></nav>
+  </header>
+  <main class="page">
+    <div class="page-heading"><span class="eyebrow">KEEP IT UPDATED</span><h1>Update employee</h1><p>Enter an employee ID, load their details, then edit the fields you want to change.</p></div>
+    <section class="panel form-panel">
+      <form id="updateForm">
+        <div class="form-grid">
+          <label>Employee ID<input type="number" id="employee_id" min="1" placeholder="e.g. 101" required></label>
+          <label>Name<input type="text" id="name" placeholder="Enter employee name" required></label>
+          <label>Email<input type="email" id="email" placeholder="name@company.com" required></label>
+          <label>Phone<input type="tel" id="phone" placeholder="e.g. 9876543210"></label>
+          <label>Department<select id="department" required><option value="">Choose a department</option><option>IT</option><option>HR</option><option>Finance</option><option>Sales</option><option>Marketing</option><option>Operations</option><option>Admin</option><option>Other</option></select></label>
+          <label>Designation<input type="text" id="designation" placeholder="e.g. Software Engineer" required></label>
+          <label>Join date<input type="date" id="join_date" required></label>
+        </div>
+        <div class="form-actions"><button class="btn primary" type="submit">Update Employee</button><button class="btn secondary" type="button" id="loadBtn">Load current details</button><button class="btn secondary" type="reset">Clear Form</button></div>
+        <p id="message" class="message" role="status"></p>
+      </form>
+    </section>
+  </main>
+  <footer>Bharath Employee Payroll Management System · Employee Payroll Management System</footer>
+<script>
+const emp = () => ({
+  employee_id: Number(document.getElementById("employee_id").value),
+  name: document.getElementById("name").value.trim(),
+  email: document.getElementById("email").value.trim(),
+  phone: document.getElementById("phone").value.trim(),
+  department: document.getElementById("department").value,
+  designation: document.getElementById("designation").value.trim(),
+  join_date: document.getElementById("join_date").value
+});
+document.getElementById("loadBtn").addEventListener("click", async () => {
+  const id = document.getElementById("employee_id").value, message = document.getElementById("message");
+  if (!id) { message.textContent = "Enter an employee ID first."; message.className = "message error"; return; }
+  try {
+    const r = await fetch("/employees/" + encodeURIComponent(id));
+    if (!r.ok) throw new Error(r.status === 404 ? "Employee not found." : "Request failed: " + r.status);
+    const item = (await r.json())[0];
+    ["name", "email", "phone", "department", "designation", "join_date"].forEach(k => document.getElementById(k).value = item[k] ?? "");
+    message.textContent = "Details loaded. Edit and click Update."; message.className = "message success";
+  } catch (err) { message.textContent = err.message; message.className = "message error"; }
+});
+document.getElementById("updateForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const id = document.getElementById("employee_id").value, message = document.getElementById("message");
+  try {
+    const r = await fetch("/employees/" + encodeURIComponent(id), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(emp()) });
+    const t = await r.text();
+    if (!r.ok) throw new Error(t || "Could not update employee.");
+    message.textContent = t || "Employee updated successfully."; message.className = "message success";
+  } catch (err) { message.textContent = err.message; message.className = "message error"; }
+});
+</script>
+</body>
+</html>

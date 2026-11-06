@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salary | Bharath Employee Payroll Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">💼 Bharath Employee Payroll Management System</div>
+    <nav><a href="index.html">Home</a><a href="list.html">All Employees</a><a href="listOne.html">Search</a><a href="insert.html">Add Employee</a><a href="update.html">Update</a><a href="delete.html">Delete</a><a class="active" href="salary.html">Salary</a><a href="payroll.html">Payroll</a><a href="reports.html">Reports</a></nav>
+  </header>
+  <main class="page">
+    <div class="page-heading"><span class="eyebrow">SALARY STRUCTURE</span><h1>Salary details</h1><p>Net salary is calculated automatically: basic salary + allowance − deduction.</p></div>
+    <section class="panel form-panel">
+      <form id="salaryForm">
+        <div class="form-grid">
+          <label>Salary ID<input type="number" id="salary_id" placeholder="Auto (leave blank for new)" readonly></label>
+          <label>Employee ID<input type="number" id="employee_id" min="1" placeholder="e.g. 101" required></label>
+          <label>Basic salary<input type="number" id="basic_salary" min="0" step="0.01" placeholder="e.g. 45000" required></label>
+          <label>Allowance<input type="number" id="allowance" min="0" step="0.01" placeholder="e.g. 8000" required></label>
+          <label>Deduction<input type="number" id="deduction" min="0" step="0.01" placeholder="e.g. 3500" required></label>
+          <label>Net salary (auto)<input type="text" id="net_salary" placeholder="Calculated" readonly></label>
+        </div>
+        <div class="form-actions"><button class="btn primary" type="submit" id="saveBtn">Save Salary</button><button class="btn secondary" type="button" id="resetBtn">Clear Form</button></div>
+        <p id="message" class="message" role="status"></p>
+      </form>
+    </section>
+    <section class="panel section-gap">
+      <div class="toolbar"><h2>Salary records</h2><button class="btn primary" onclick="loadSalaries()">↻ Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Salary ID</th><th>Employee</th><th>Basic</th><th>Allowance</th><th>Deduction</th><th>Net salary</th><th>Action</th></tr></thead><tbody id="rows"><tr><td colspan="7">Loading…</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <footer>Bharath Employee Payroll Management System · Employee Payroll Management System</footer>
+<script>
+const $ = id => document.getElementById(id);
+const money = v => Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function calcNet() {
+  const b = Number($("basic_salary").value), a = Number($("allowance").value), d = Number($("deduction").value);
+  $("net_salary").value = ($("basic_salary").value === "") ? "" : (b + a - d).toFixed(2);
+}
+["basic_salary", "allowance", "deduction"].forEach(id => $(id).addEventListener("input", calcNet));
+function clearForm() { $("salaryForm").reset(); $("salary_id").value = ""; $("saveBtn").textContent = "Save Salary"; }
+$("resetBtn").addEventListener("click", () => { clearForm(); $("message").textContent = ""; });
+
+$("salaryForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const id = $("salary_id").value, msg = $("message");
+  const body = { employee_id: Number($("employee_id").value), basic_salary: Number($("basic_salary").value),
+                 allowance: Number($("allowance").value), deduction: Number($("deduction").value) };
+  try {
+    const r = await fetch(id ? "/salaries/" + id : "/salaries", { method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const t = await r.text();
+    if (!r.ok) throw new Error(t);
+    msg.textContent = t; msg.className = "message success"; clearForm(); loadSalaries();
+  } catch (err) { msg.textContent = err.message; msg.className = "message error"; }
+});
+
+function btn(label, cls, fn) { const b = document.createElement("button"); b.className = "row-btn " + cls; b.textContent = label; b.onclick = fn; return b; }
+
+async function loadSalaries() {
+  const rows = $("rows");
+  try {
+    const r = await fetch("/salaries");
+    if (!r.ok) throw new Error("Request failed: " + r.status);
+    const list = await r.json(); rows.innerHTML = "";
+    if (!list.length) { rows.innerHTML = '<tr><td colspan="7">No salary records yet.</td></tr>'; return; }
+    list.forEach(s => {
+      const tr = document.createElement("tr");
+      [s.salary_id, s.employee_name + " (ID " + s.employee_id + ")", money(s.basic_salary), money(s.allowance), money(s.deduction), money(s.net_salary)].forEach(v => {
+        const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+      });
+      const ac = document.createElement("td");
+      ac.appendChild(btn("Edit", "", () => {
+        $("salary_id").value = s.salary_id; $("employee_id").value = s.employee_id;
+        $("basic_salary").value = s.basic_salary; $("allowance").value = s.allowance; $("deduction").value = s.deduction;
+        calcNet(); $("saveBtn").textContent = "Update Salary"; window.scrollTo({ top: 0, behavior: "smooth" });
+      }));
+      ac.appendChild(btn("Delete", "red", async () => {
+        if (!confirm("Delete salary record " + s.salary_id + "?")) return;
+        const res = await fetch("/salaries/" + s.salary_id, { method: "DELETE" });
+        const t = await res.text();
+        $("message").textContent = t; $("message").className = "message " + (res.ok ? "success" : "error");
+        loadSalaries();
+      }));
+      tr.appendChild(ac); rows.appendChild(tr);
+    });
+  } catch (e) {
+    rows.innerHTML = '<tr><td colspan="7">Could not load salaries. Check that the backend API is running.</td></tr>';
+    $("message").textContent = e.message; $("message").className = "message error";
+  }
+}
+loadSalaries();
+</script>
+</body>
+</html>

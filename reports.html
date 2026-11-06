@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports | Bharath Employee Payroll Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">💼 Bharath Employee Payroll Management System</div>
+    <nav><a href="index.html">Home</a><a href="list.html">All Employees</a><a href="listOne.html">Search</a><a href="insert.html">Add Employee</a><a href="update.html">Update</a><a href="delete.html">Delete</a><a href="salary.html">Salary</a><a href="payroll.html">Payroll</a><a class="active" href="reports.html">Reports</a></nav>
+  </header>
+  <main class="page">
+    <div class="page-heading"><span class="eyebrow">ADMIN</span><h1>Payroll reports</h1><p>Month-wise payroll totals, department salary summary, and employees whose payroll is still to be generated.</p></div>
+    <section class="panel">
+      <div class="toolbar"><h2>Monthly payroll summary</h2><button class="btn primary" onclick="loadReports()">↻ Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Period</th><th>Employees</th><th>Total net salary</th><th>Paid</th><th>Pending / On hold</th></tr></thead><tbody id="monthlyRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
+    </section>
+    <section class="panel section-gap">
+      <div class="toolbar"><h2>Department summary</h2></div>
+      <div class="table-wrap"><table><thead><tr><th>Department</th><th>Employees</th><th>Average net salary</th><th>Total net salary</th></tr></thead><tbody id="deptRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div>
+    </section>
+    <section class="panel section-gap">
+      <div class="toolbar"><h2>Payroll not yet generated</h2>
+        <div class="actions"><select id="month" class="filter-select"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select><input id="year" type="number" class="filter-select" min="2000" max="2100" placeholder="Year">
+        <button class="btn primary" onclick="loadMissing()">Check</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Designation</th></tr></thead><tbody id="missingRows"><tr><td colspan="4">Choose a month and year.</td></tr></tbody></table></div>
+      <p id="message" class="message"></p>
+    </section>
+  </main>
+  <footer>Bharath Employee Payroll Management System · Employee Payroll Management System</footer>
+<script>
+const $ = id => document.getElementById(id);
+const MONTHS = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const money = v => Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+$("year").value = new Date().getFullYear(); $("month").value = new Date().getMonth() + 1;
+
+function render(rowsId, list, cols, emptyText, mapper) {
+  const rows = $(rowsId); rows.innerHTML = "";
+  if (!list.length) { rows.innerHTML = '<tr><td colspan="' + cols + '">' + emptyText + '</td></tr>'; return; }
+  list.forEach(item => {
+    const tr = document.createElement("tr");
+    mapper(item).forEach(v => { const td = document.createElement("td"); td.textContent = v ?? "—"; tr.appendChild(td); });
+    rows.appendChild(tr);
+  });
+}
+async function loadReports() {
+  const msg = $("message"); msg.textContent = "";
+  try {
+    const [m, d] = await Promise.all([fetch("/reports/monthly-summary"), fetch("/reports/department-summary")]);
+    if (!m.ok || !d.ok) throw new Error("Request failed.");
+    render("monthlyRows", await m.json(), 5, "No payroll generated yet.", x => [MONTHS[x.month] + " " + x.year, x.employees, money(x.total_net), money(x.paid_amount), money(x.pending_amount)]);
+    render("deptRows", await d.json(), 4, "No salary records yet.", x => [x.department, x.employees, money(x.avg_net_salary), money(x.total_net_salary)]);
+  } catch (e) { msg.textContent = "Could not load reports. Check that the backend API is running. " + e.message; msg.className = "message error"; }
+}
+async function loadMissing() {
+  const msg = $("message"); msg.textContent = "";
+  try {
+    const r = await fetch("/reports/not-generated?month=" + $("month").value + "&year=" + $("year").value);
+    if (!r.ok) throw new Error(await r.text());
+    render("missingRows", await r.json(), 4, "Payroll is generated for everyone 🎉", x => [x.employee_id, x.name, x.department, x.designation]);
+  } catch (e) { msg.textContent = e.message; msg.className = "message error"; }
+}
+loadReports(); loadMissing();
+</script>
+</body>
+</html>

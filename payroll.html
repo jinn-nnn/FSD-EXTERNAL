@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payroll | Bharath Employee Payroll Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">💼 Bharath Employee Payroll Management System</div>
+    <nav><a href="index.html">Home</a><a href="list.html">All Employees</a><a href="listOne.html">Search</a><a href="insert.html">Add Employee</a><a href="update.html">Update</a><a href="delete.html">Delete</a><a href="salary.html">Salary</a><a class="active" href="payroll.html">Payroll</a><a href="reports.html">Reports</a></nav>
+  </header>
+  <main class="page">
+    <div class="page-heading"><span class="eyebrow">PAYROLL</span><h1>Monthly payroll</h1><p>Generate payroll for an employee, then mark it Paid or put it On Hold.</p></div>
+    <section class="panel form-panel">
+      <form id="payrollForm">
+        <div class="form-grid">
+          <label>Employee ID<input type="number" id="employee_id" min="1" placeholder="e.g. 101" required></label>
+          <label>Salary ID<input type="number" id="salary_id" min="1" placeholder="e.g. 1" required></label>
+          <label>Month<select id="month" required><option value="">Choose month</option><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></label>
+          <label>Year<input type="number" id="year" min="2000" max="2100" placeholder="e.g. 2026" required></label>
+        </div>
+        <div class="form-actions"><button class="btn primary" type="submit">Generate Payroll</button><button class="btn secondary" type="reset">Clear Form</button></div>
+        <p id="message" class="message" role="status"></p>
+      </form>
+    </section>
+    <section class="panel section-gap">
+      <div class="toolbar"><h2>Payroll records</h2>
+        <div class="actions"><select id="statusFilter" class="filter-select" onchange="loadPayroll()"><option value="">All statuses</option><option>Pending</option><option>Paid</option><option>On Hold</option></select>
+        <button class="btn primary" onclick="loadPayroll()">↻ Refresh</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Employee</th><th>Period</th><th>Salary ID</th><th>Net salary</th><th>Payment date</th><th>Status</th><th>Action</th></tr></thead><tbody id="rows"><tr><td colspan="8">Loading…</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <footer>Bharath Employee Payroll Management System · Employee Payroll Management System</footer>
+<script>
+const $ = id => document.getElementById(id);
+const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const money = v => Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+$("year").value = new Date().getFullYear(); $("month").value = new Date().getMonth() + 1;
+
+$("payrollForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const msg = $("message");
+  const body = { employee_id: Number($("employee_id").value), salary_id: Number($("salary_id").value),
+                 month: Number($("month").value), year: Number($("year").value) };
+  try {
+    const r = await fetch("/payroll", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const t = await r.text();
+    if (!r.ok) throw new Error(t);
+    msg.textContent = t; msg.className = "message success"; loadPayroll(true);
+  } catch (err) { msg.textContent = err.message; msg.className = "message error"; }
+});
+
+async function act(id, action) {
+  const msg = $("message");
+  try {
+    const r = await fetch("/payroll/" + id + (action === "delete" ? "" : "/" + action), { method: action === "delete" ? "DELETE" : "PUT" });
+    const t = await r.text();
+    if (!r.ok) throw new Error(t);
+    msg.textContent = t; msg.className = "message success";
+  } catch (err) { msg.textContent = err.message; msg.className = "message error"; }
+  loadPayroll(true);
+}
+function btn(label, cls, fn) { const b = document.createElement("button"); b.className = "row-btn " + cls; b.textContent = label; b.onclick = fn; return b; }
+
+async function loadPayroll(keepMessage) {
+  const rows = $("rows"), msg = $("message"), status = $("statusFilter").value;
+  if (keepMessage !== true) msg.textContent = "";
+  try {
+    const r = await fetch("/payroll" + (status ? "?status=" + encodeURIComponent(status) : ""));
+    if (!r.ok) throw new Error("Request failed: " + r.status);
+    const list = await r.json(); rows.innerHTML = "";
+    if (!list.length) { rows.innerHTML = '<tr><td colspan="8">No payroll records found.</td></tr>'; return; }
+    list.forEach(p => {
+      const tr = document.createElement("tr");
+      [p.payroll_id, p.employee_name + " (ID " + p.employee_id + ")", MONTHS[p.month] + " " + p.year, p.salary_id, money(p.net_salary), p.payment_date || "—"].forEach(v => {
+        const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+      });
+      const st = document.createElement("td"), badge = document.createElement("span");
+      badge.className = "badge " + p.payment_status.toLowerCase().replace(" ", ""); badge.textContent = p.payment_status; st.appendChild(badge); tr.appendChild(st);
+      const ac = document.createElement("td");
+      if (p.payment_status !== "Paid") ac.appendChild(btn("Pay", "", () => act(p.payroll_id, "pay")));
+      if (p.payment_status === "Pending") ac.appendChild(btn("Hold", "", () => act(p.payroll_id, "hold")));
+      if (p.payment_status !== "Paid") ac.appendChild(btn("Delete", "red", () => { if (confirm("Delete payroll record " + p.payroll_id + "?")) act(p.payroll_id, "delete"); }));
+      tr.appendChild(ac); rows.appendChild(tr);
+    });
+  } catch (e) {
+    rows.innerHTML = '<tr><td colspan="8">Could not load payroll. Check that the backend API is running.</td></tr>';
+    msg.textContent = e.message; msg.className = "message error";
+  }
+}
+loadPayroll();
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delete Employee | Bharath Employee Payroll Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">💼 Bharath Employee Payroll Management System</div>
+    <nav><a href="index.html">Home</a><a href="list.html">All Employees</a><a href="listOne.html">Search</a><a href="insert.html">Add Employee</a><a href="update.html">Update</a><a class="active" href="delete.html">Delete</a><a href="salary.html">Salary</a><a href="payroll.html">Payroll</a><a href="reports.html">Reports</a></nav>
+  </header>
+  <main class="page">
+    <div class="page-heading"><span class="eyebrow">EMPLOYEE CONTROL</span><h1>Delete employee</h1><p>Remove an employee from the payroll database using their ID.</p></div>
+    <section class="panel form-panel"><div class="warning-icon">!</div>
+      <form id="deleteForm"><label>Employee ID<input id="employee_id" type="number" min="1" placeholder="Enter employee ID to delete" required></label>
+      <p class="hint">This action permanently removes the selected employee. Employees who already have salary or payroll records cannot be deleted.</p>
+      <button class="btn danger" type="submit">Delete Employee</button><p id="message" class="message"></p></form>
+    </section>
+  </main>
+  <footer>Bharath Employee Payroll Management System · Employee Payroll Management System</footer>
+<script>
+document.getElementById("deleteForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const id = document.getElementById("employee_id").value, msg = document.getElementById("message");
+  if (!confirm("Are you sure you want to delete employee ID " + id + "?")) return;
+  try {
+    const r = await fetch("/employees/" + encodeURIComponent(id), { method: "DELETE" });
+    const t = await r.text();
+    if (!r.ok) throw new Error(t || "Could not delete employee.");
+    msg.textContent = t || "Employee deleted successfully."; msg.className = "message success"; e.target.reset();
+  } catch (err) { msg.textContent = err.message; msg.className = "message error"; }
+});
+</script>
+</body>
+</html>

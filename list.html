@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Employees | Bharath Employee Payroll Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">💼 Bharath Employee Payroll Management System</div>
+    <nav><a href="index.html">Home</a><a class="active" href="list.html">All Employees</a><a href="listOne.html">Search</a><a href="insert.html">Add Employee</a><a href="update.html">Update</a><a href="delete.html">Delete</a><a href="salary.html">Salary</a><a href="payroll.html">Payroll</a><a href="reports.html">Reports</a></nav>
+  </header>
+  <main class="page">
+    <div class="page-heading"><span class="eyebrow">EMPLOYEE RECORDS</span><h1>All employees</h1><p>View the employees currently stored in the payroll database.</p></div>
+    <section class="panel">
+      <div class="toolbar"><h2>Employee list</h2><button class="btn primary" onclick="loadEmployees()">↻ Refresh list</button></div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Department</th><th>Designation</th><th>Joined</th></tr></thead><tbody id="rows"><tr><td colspan="7">Loading employees…</td></tr></tbody></table></div>
+      <p id="message" class="message"></p>
+    </section>
+  </main>
+  <footer>Bharath Employee Payroll Management System · Employee Payroll Management System</footer>
+<script>
+async function loadEmployees() {
+  const rows = document.getElementById("rows"), msg = document.getElementById("message");
+  rows.innerHTML = '<tr><td colspan="7">Loading employees…</td></tr>'; msg.textContent = "";
+  try {
+    const response = await fetch("/employees");
+    if (!response.ok) throw new Error("Request failed: " + response.status);
+    const items = await response.json();
+    rows.innerHTML = "";
+    if (!items.length) { rows.innerHTML = '<tr><td colspan="7">No employees found. Add your first employee.</td></tr>'; return; }
+    items.forEach(e => {
+      const tr = document.createElement("tr");
+      [e.employee_id, e.name, e.email, e.phone, e.department, e.designation, e.join_date].forEach(v => {
+        const td = document.createElement("td"); td.textContent = v ?? "—"; tr.appendChild(td);
+      });
+      rows.appendChild(tr);
+    });
+  } catch (e) {
+    rows.innerHTML = '<tr><td colspan="7">Could not load employees. Check that the backend API is running.</td></tr>';
+    msg.textContent = e.message; msg.className = "message error";
+  }
+}
+loadEmployees();
+</script>
+</body>
+</html>
